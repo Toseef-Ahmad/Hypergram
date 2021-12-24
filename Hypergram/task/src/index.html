@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Hypergram</title>
+    <link rel="stylesheet" href="index.css" />
+</head>
+<body>
+    <!--main screen-->
+    <main>
+    <canvas class="canvas" id="canvas" width="240" height="297"></canvas>
+        <!-- control panel section -->
+        <div class="control-panel">
+
+            <!--upload img file to our app-->
+            <input type="file" id="file-input" class="file-input"/>
+            <label for="file-input">UPLOAD FILE</label>
+            <!--   close upload img file section  -->
+
+            <!--adjust brightness -->
+            <label for="brightness">Brightness</label>
+            <input type="range" id="brightness" min="-255" max="255" step="1" />
+            <!--close brightness section-->
+
+            <!--adjust contrast-->
+            <label for="contrast">Contrast</label>
+            <input type="range" id="contrast" min="-128" max="128" step="1" />
+            <!--close contrast section-->
+
+            <!--adjust transparent-->
+            <label for="transparent">Transparent</label>
+            <input type="range" id="transparent" min="0" max="1" step="0.1" />
+            <!--close transparent section-->
+
+            <button id="save-button" class="save-img">SAVE IMAGE</button>
+        </div>
+        <!--close control panel section-->
+    </main>
+    <!--Close main screen section-->
+    <script>
+
+        const canvas = document.getElementById('canvas');
+        const canvasContext = canvas.getContext('2d');
+        let imageData = null;
+        let pixels = null;
+        let tempImageDate = null;
+        const image = document.getElementById('file-input');
+        const brightness = document.getElementById('brightness');
+        const contrast = document.getElementById('contrast');
+        const transparent = document.getElementById('transparent');
+
+        const reader = new FileReader();
+        const img = new Image();
+
+        image.addEventListener('change', (e) => {
+            reader.addEventListener('load', () => {
+                img.addEventListener('load', () => {
+
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    canvasContext.drawImage(img, 0, 0);
+                    // imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                    //
+                    // pixels = imageData.data;
+
+                })
+
+                img.src = reader.result; // its same like html img tag, we get file and set to this.
+
+            })
+
+            reader.readAsDataURL(e.target.files[0]); /// we set read file by this method and after this reading complete it runs onload
+
+            const trancate = (value) => {
+                // console.log(value, ' value')
+                switch (value) {
+                    case value < 0:
+                        return 0;
+                    case value > 255:
+                        return 255;
+                    default:
+                        return value;
+                }
+            }
+
+            brightness.addEventListener('input', (e) => {
+                canvasContext.drawImage(img, 0, 0);
+                imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
+                pixels = imageData.data;
+                let brightness = parseInt(e.target.value);
+
+                for (let i = 0; i < pixels.length; i+= 4) {
+                    pixels[i] = trancate(pixels[i] + brightness);
+                    pixels[i + 1] = trancate(pixels[i + 1] + brightness);
+                    pixels[i + 2] = trancate(pixels[i + 2] + brightness);
+                    // pixels[i + 3] = pixels[i + 3] + 10;
+                }
+                canvasContext.putImageData(imageData, 0, 0);
+            });
+
+            contrast.addEventListener('input', (e) => {
+                console.log(e.target.value, ' change')
+            });
+
+            transparent.addEventListener('input', (e) => {
+                console.log(e.target.value);
+            })
+
+        });
+
+    </script>
+</body>
+</html>
