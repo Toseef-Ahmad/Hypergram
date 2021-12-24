@@ -29,7 +29,7 @@
 
             <!--adjust transparent-->
             <label for="transparent">Transparent</label>
-            <input type="range" id="transparent" min="0" max="1" step="0.1" />
+            <input type="range" id="transparent" min="0" max="1" step="0.1" value="1" />
             <!--close transparent section-->
 
             <button id="save-button" class="save-img">SAVE IMAGE</button>
@@ -39,74 +39,115 @@
     <!--Close main screen section-->
     <script>
 
-        const canvas = document.getElementById('canvas');
-        const canvasContext = canvas.getContext('2d');
-        let imageData = null;
-        let pixels = null;
-        let tempImageDate = null;
-        const image = document.getElementById('file-input');
-        const brightness = document.getElementById('brightness');
-        const contrast = document.getElementById('contrast');
-        const transparent = document.getElementById('transparent');
+        /* targeting canvas from html */
+       const canvas = document.getElementById('canvas');
 
-        const reader = new FileReader();
-        const img = new Image();
+       /* initialize canvas with 2d dimension */
+       const canvasContext = canvas.getContext('2d');
 
-        image.addEventListener('change', (e) => {
-            reader.addEventListener('load', () => {
-                img.addEventListener('load', () => {
+       /* global variables */
+       let imageData = null; // storing image data from canvas
+       let pixels = null; // storing image pixels after getting image data.
 
-                    canvas.width = img.width;
-                    canvas.height = img.height;
-                    canvasContext.drawImage(img, 0, 0);
-                    // imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
-                    //
-                    // pixels = imageData.data;
+       /* getting image from input field in html */
+       const image = document.getElementById('file-input');
 
-                })
+       /* getting dom elements data which will use to modify image content */
+       const brightness = document.getElementById('brightness'); // slider
+       const contrast = document.getElementById('contrast'); // slider
+       const transparent = document.getElementById('transparent'); // slider
+       const saveImage = document.getElementById('save-button');
+       let stages = 0;
+       /* for manipulating data  */
+       const reader = new FileReader(); // used for file loading after loading successfully it will fire event
+       const img = new Image(); // same like <img src="" /> after reading data from reader then pass to img and it will act like image element in dom
 
-                img.src = reader.result; // its same like html img tag, we get file and set to this.
+       image.addEventListener('change', (e) => { // after select image it will fire
+           reader.addEventListener('load', () => { // after loading file it will fire
+               img.addEventListener('load', () => { // after seting img.src = reader data it will fire
+                   canvas.width = img.width; // setting canvas width
+                   canvas.height = img.height; // setting canvas height
+                   canvasContext.drawImage(img, 0, 0); // now set image to canvas for playing
+               })
 
-            })
+               img.src = reader.result; // its same like html img tag, we get file and set to this.
 
-            reader.readAsDataURL(e.target.files[0]); /// we set read file by this method and after this reading complete it runs onload
+           })
 
-            const trancate = (value) => {
-                // console.log(value, ' value')
-                switch (value) {
-                    case value < 0:
-                        return 0;
-                    case value > 255:
-                        return 255;
-                    default:
-                        return value;
-                }
-            }
+           reader.readAsDataURL(e.target.files[0]); /// we set read file by this method and after this reading complete it runs onload
 
-            brightness.addEventListener('input', (e) => {
-                canvasContext.drawImage(img, 0, 0);
-                imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height);
-                pixels = imageData.data;
-                let brightness = parseInt(e.target.value);
+           /* this method is used for helping image modification */
+           const truncate = (/* pixel value */ value) => {
+               switch (value) { // check pixel value and then decide what need to do
+                   case value < 0:
+                       return 0;
+                   case value > 255:
+                       return 255;
+                   default:
+                       return value;
+               }
+           }
 
-                for (let i = 0; i < pixels.length; i+= 4) {
-                    pixels[i] = trancate(pixels[i] + brightness);
-                    pixels[i + 1] = trancate(pixels[i + 1] + brightness);
-                    pixels[i + 2] = trancate(pixels[i + 2] + brightness);
-                    // pixels[i + 3] = pixels[i + 3] + 10;
-                }
-                canvasContext.putImageData(imageData, 0, 0);
-            });
+           /* accessing image from canvas and then getting this image pixels array for modification */
+           const getImagePixels = () => {
+               canvasContext.drawImage(img, 0, 0); // setting image to canvas.
+               imageData = canvasContext.getImageData(0, 0, canvas.width, canvas.height); // getting canvas image
+               return imageData.data; // return image pixels array
+           }
 
-            contrast.addEventListener('input', (e) => {
-                console.log(e.target.value, ' change')
-            });
+           /* main modify method for modifying image brightness and contrast and transparency */
+           const modifyImage = () => {
 
-            transparent.addEventListener('input', (e) => {
-                console.log(e.target.value);
-            })
+               let imageBrightness = parseInt(brightness.value); // default value of brightness is: 0
+               let imageContrast = parseInt(contrast.value); // default value of contrast is: 0
+               let imageTranspareny = parseFloat(transparent.value); // default value of transparency is: 1
 
-        });
+               /* fomula for modifing contrast of image */
+               let factor = 259 * (255 + imageContrast) / (255 * (259 - imageContrast));
+               pixels = getImagePixels();
+
+               /* this loop will run pixels length - 4 times */
+               /* there is one Dimentional array first 4 numbers present one pixel */
+               for (let i = 0; i < pixels.length; i+= 4) {
+                   pixels[i] = truncate(factor * (pixels[i] - 128) + 128 + imageBrightness); //red
+                   pixels[i + 1] = truncate(factor * (pixels[i + 1] - 128) + 128 + imageBrightness); //green
+                   pixels[i + 2] = truncate(factor * (pixels[i + 2] - 128) + 128 + imageBrightness); //blue
+                   pixels[i + 3] *= imageTranspareny; // transparency
+               }
+
+
+               canvasContext.putImageData(imageData, 0, 0); // after moiding pixels array again pass to canvas
+
+           }
+
+           brightness.addEventListener('change', (e) => { // fire when brightness slider move
+               modifyImage();
+           });
+
+           contrast.addEventListener('change', (e) => { // fire when contrast slider move
+               modifyImage();
+           });
+
+           transparent.addEventListener('change', (e) => { // fire when transparent slider move
+                modifyImage();
+           });
+       });
+
+
+        document.querySelector('.save-img').addEventListener('click', () => {
+            let image = canvas.toDataURL();
+
+            // create temporary link
+            let tmpLink = document.createElement( 'a' );
+            tmpLink.download = 'result.png'; // set the name of the download file
+            tmpLink.href = image;
+
+            // temporarily add link to body and initiate the download
+            document.body.appendChild( tmpLink );
+            tmpLink.click();
+            document.body.removeChild( tmpLink );
+        })
+
 
     </script>
 </body>
